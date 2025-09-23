@@ -1,156 +1,125 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { easyWords, averageWords, hardWords } from "../words"; // aap ye file bana ke words array export karenge
 
-const wordsToSpell = [
-  "lake","wave","speed","cheese","rain",
-  "now","rest","cube","thank","sheep",
-  "fix","dine","stone","sorry","broom",
-  "thumb","hide","seed","girl","red",
-  "fresh","need","bone","rose","shed"
-];
-
-function shuffle(array) {
-  let counter = array.length;
-  while (counter > 0) {
-    const index = Math.floor(Math.random() * counter);
-    counter--;
-    [array[counter], array[index]] = [array[index], array[counter]];
-  }
-  return array;
-}
-
-function TrainingArena({ speech }) {
-  const [words, setWords] = useState(shuffle([...wordsToSpell]));
+function TrainingArena({ user, mode, onBack, playCorrect, playWrong, musicOn, toggleMusic }) {
+  const [words, setWords] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [inputValue, setInputValue] = useState("");
+  const [input, setInput] = useState("");
   const [score, setScore] = useState(0);
-  const [currentWrong, setCurrentWrong] = useState(0);
-  const [totalWrong, setTotalWrong] = useState(0);
-  const [wordsAttempted, setWordsAttempted] = useState([]);
-  const [trainingStarted, setTrainingStarted] = useState(false);
+  const [feedback, setFeedback] = useState(""); // Correct / Wrong feedback
+  const [timer, setTimer] = useState(10);
+  const timerRef = useRef(null);
 
-  const inputRef = useRef();
-
-  const currentWord = words[currentIndex];
+  const speechRef = useRef(window.speechSynthesis);
 
   useEffect(() => {
-    if (trainingStarted && speech) speakWord();
-  }, [currentIndex, trainingStarted]);
+    // Pick 10 random words based on mode
+    let source = [];
+    if (mode === "easy") source = easyWords;
+    else if (mode === "average") source = averageWords;
+    else source = hardWords;
 
-  const speakWord = () => {
-    if (!speech) return;
-    speech.speak({
-      text: currentWord,
-      queue: false
-    });
-  };
+    let shuffled = [...source].sort(() => Math.random() - 0.5).slice(0, 10);
+    setWords(shuffled);
+  }, [mode]);
 
-  const handleStart = () => {
-    setTrainingStarted(true);
-    setTimeout(() => inputRef.current.focus(), 100);
+  useEffect(() => {
+    if (words.length === 0 || currentIndex >= words.length) return;
+
+    setInput("");
+    setFeedback("");
+    setTimer(10);
+    pronounceWord(words[currentIndex]);
+
+    // Timer countdown
+    timerRef.current = setInterval(() => {
+      setTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          handleSubmit(); // auto submit on timer end
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerRef.current);
+  }, [words, currentIndex]);
+
+  const pronounceWord = (word) => {
+    if (!window.speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = "en-IN"; // Indian English
+    speechSynthesis.speak(utterance);
   };
 
   const handleSubmit = () => {
-    const userWord = inputValue.trim().toLowerCase();
-    const correctWord = currentWord.toLowerCase();
-    const isCorrect = userWord === correctWord;
+    clearInterval(timerRef.current);
 
-    // Update Score & Wrong counters
-    if (isCorrect) {
-      setScore(prev => prev + Math.max(10 - currentWrong * 2, 1));
+    const currentWord = words[currentIndex];
+    if (input.trim().toLowerCase() === currentWord.toLowerCase()) {
+      setScore(prev => prev + 1);
+      setFeedback(`✅ Correct!`);
+      playCorrect();
     } else {
-      setCurrentWrong(prev => prev + 1);
-      setTotalWrong(prev => prev + 1);
+      setFeedback(`❌ Wrong! Correct: ${currentWord}`);
+      playWrong();
     }
 
-    // Update attempted words list
-    setWordsAttempted(prev => [
-      ...prev,
-      { word: currentWord, correct: isCorrect }
-    ]);
-
-    // Reset input
-    setInputValue("");
-    setCurrentWrong(0);
-
-    // Next word
-    if (currentIndex + 1 < words.length) {
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      // Game finished
-      alert(`Training Completed! Final Score: ${score}`);
-    }
-
-    // Focus on input for next word
-    setTimeout(() => inputRef.current.focus(), 100);
+    // Next word after short delay
+    setTimeout(() => {
+      if (currentIndex + 1 < words.length) {
+        setCurrentIndex(currentIndex + 1);
+      } else {
+        setFeedback(`🏁 Round Finished! Your score: ${score + (input.trim().toLowerCase() === currentWord.toLowerCase() ? 1 : 0)}/${words.length}`);
+      }
+    }, 1500);
   };
 
-  const progressPercentage = Math.floor((wordsAttempted.length / words.length) * 100);
-
   return (
-    <div className="w-full max-w-md mx-auto bg-white p-4 rounded-lg shadow-lg mt-6">
-      {!trainingStarted && (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 via-purple-200 to-pink-100 p-6">
+      <div className="flex gap-4 mb-4">
         <button
-          onClick={handleStart}
-          className="w-full py-2 mb-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg"
+          className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded font-bold"
+          onClick={onBack}
         >
-          🏁 Start Training
+          ⬅ Back
         </button>
-      )}
+        <button
+          className={`px-4 py-2 rounded font-bold ${musicOn ? "bg-green-500 text-white" : "bg-gray-300"}`}
+          onClick={toggleMusic}
+        >
+          🎵 {musicOn ? "Music On" : "Music Off"}
+        </button>
+      </div>
 
-      {trainingStarted && (
+      <h2 className="text-2xl font-bold mb-2">
+        Hello, {user?.name} {user?.avatar}
+      </h2>
+
+      {currentIndex < words.length ? (
         <>
-          <div className="mb-4 text-center text-xl font-semibold">
-            Spell the word:
-            <div className="text-purple-700 font-bold text-2xl mt-2">{currentWord}</div>
-          </div>
-
+          <p className="text-lg mb-2">Time: {timer}s</p>
           <input
-            ref={inputRef}
             type="text"
-            className="w-full p-2 border rounded mb-4"
-            placeholder="Type the word here"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
+            className="p-2 mb-2 border rounded w-64 text-center"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSubmit();
+            }}
+            autoFocus
           />
-
-          <button
-            onClick={handleSubmit}
-            className="w-full py-2 mb-4 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg"
-          >
-            ✅ Submit Answer
-          </button>
-
-          {/* Score / Wrong Buttons */}
-          <div className="flex justify-between mb-4">
-            <button className="px-3 py-1 bg-purple-500 text-white rounded">Score: {score}</button>
-            <button className="px-3 py-1 bg-yellow-500 text-white rounded">Wrong: {currentWrong}</button>
-            <button className="px-3 py-1 bg-red-500 text-white rounded">Total Wrong: {totalWrong}</button>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-300 h-4 rounded mb-4">
-            <div
-              className="bg-green-500 h-4 rounded"
-              style={{ width: `${progressPercentage}%` }}
-            />
-          </div>
-
-          {/* Words Attempted */}
-          <div className="flex flex-wrap gap-2">
-            {wordsAttempted.map((w, i) => (
-              <span
-                key={i}
-                className={`px-2 py-1 rounded ${
-                  w.correct ? "bg-green-300" : "bg-red-300"
-                }`}
-              >
-                {w.word} {w.correct ? "✅" : "❌"}
-              </span>
-            ))}
-          </div>
+          <p className="text-xl font-semibold text-center">{feedback}</p>
+          <p className="mt-2">Progress: {currentIndex + 1}/{words.length}</p>
         </>
+      ) : (
+        <p className="text-xl font-bold text-center">{feedback}</p>
       )}
+
+      <p className="mt-4 text-sm text-center">
+        Sound Effects by <a href="https://pixabay.com/users/freesound_community-46691455/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=88784" target="_blank" rel="noopener noreferrer">freesound_community</a> from <a href="https://pixabay.com/sound-effects/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=88784" target="_blank" rel="noopener noreferrer">Pixabay</a>
+      </p>
     </div>
   );
 }
