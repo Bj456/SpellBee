@@ -6,7 +6,7 @@ function App() {
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.load(); // ensure audio is ready
+      audioRef.current.load();
     }
   }, []);
 
@@ -16,7 +16,7 @@ function App() {
       audioRef.current.pause();
     } else {
       audioRef.current.play().catch((err) => {
-        console.log("Autoplay prevented, user interaction required:", err);
+        console.log("Error playing audio:", err);
       });
     }
     setMusicOn(!musicOn);
@@ -45,7 +45,6 @@ function App() {
         </button>
       </div>
 
-      {/* Background Music */}
       <audio ref={audioRef} loop style={{ display: "none" }}>
         <source src="/bg.mp3" type="audio/mp3" />
         Your browser does not support the audio element.
