@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 
 const wordsToSpell = [
-  "lake", "wave", "speed", "cheese", "rain",
-  "now", "rest", "cube", "thank", "sheep",
-  "fix", "dine", "stone", "sorry", "broom",
-  "thumb", "hide", "seed", "girl", "red",
-  "fresh", "need", "bone", "rose", "shed"
+  "lake","wave","speed","cheese","rain",
+  "now","rest","cube","thank","sheep",
+  "fix","dine","stone","sorry","broom",
+  "thumb","hide","seed","girl","red",
+  "fresh","need","bone","rose","shed"
 ];
 
 function shuffle(array) {
@@ -18,8 +18,9 @@ function shuffle(array) {
   return array;
 }
 
-function TrainingArena({ speech, setSpeech }) {
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+function TrainingArena({ speech }) {
+  const [words, setWords] = useState(shuffle([...wordsToSpell]));
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const [score, setScore] = useState(0);
   const [currentWrong, setCurrentWrong] = useState(0);
@@ -29,55 +30,64 @@ function TrainingArena({ speech, setSpeech }) {
 
   const inputRef = useRef();
 
-  const words = shuffle([...wordsToSpell]);
+  const currentWord = words[currentIndex];
 
-  const currentWord = words[currentWordIndex];
+  useEffect(() => {
+    if (trainingStarted && speech) speakWord();
+  }, [currentIndex, trainingStarted]);
+
+  const speakWord = () => {
+    if (!speech) return;
+    speech.speak({
+      text: currentWord,
+      queue: false
+    });
+  };
 
   const handleStart = () => {
     setTrainingStarted(true);
-    speakWord();
-  };
-
-  const speakWord = () => {
-    if (speech) {
-      speech.speak({
-        text: currentWord,
-        queue: false
-      });
-    }
+    setTimeout(() => inputRef.current.focus(), 100);
   };
 
   const handleSubmit = () => {
-    let correct = inputValue.trim().toLowerCase() === currentWord.toLowerCase();
-    if (correct) {
-      setScore(prev => prev + 10 - currentWrong * 2 > 0 ? 10 - currentWrong * 2 : 1);
+    const userWord = inputValue.trim().toLowerCase();
+    const correctWord = currentWord.toLowerCase();
+    const isCorrect = userWord === correctWord;
+
+    // Update Score & Wrong counters
+    if (isCorrect) {
+      setScore(prev => prev + Math.max(10 - currentWrong * 2, 1));
     } else {
       setCurrentWrong(prev => prev + 1);
+      setTotalWrong(prev => prev + 1);
     }
 
+    // Update attempted words list
     setWordsAttempted(prev => [
       ...prev,
-      { word: currentWord, correct }
+      { word: currentWord, correct: isCorrect }
     ]);
 
-    if (currentWrong > 0 && !correct) setTotalWrong(prev => prev + 1);
-
-    // Reset for next word
+    // Reset input
     setInputValue("");
     setCurrentWrong(0);
-    setCurrentWordIndex(prev => (prev + 1) % words.length);
 
-    // Speak next word
-    setTimeout(() => {
-      if (currentWordIndex + 1 < words.length) {
-        speakWord();
-        inputRef.current.focus();
-      }
-    }, 500);
+    // Next word
+    if (currentIndex + 1 < words.length) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      // Game finished
+      alert(`Training Completed! Final Score: ${score}`);
+    }
+
+    // Focus on input for next word
+    setTimeout(() => inputRef.current.focus(), 100);
   };
 
+  const progressPercentage = Math.floor((wordsAttempted.length / words.length) * 100);
+
   return (
-    <div className="w-full max-w-md mx-auto bg-white p-4 rounded-lg shadow-lg">
+    <div className="w-full max-w-md mx-auto bg-white p-4 rounded-lg shadow-lg mt-6">
       {!trainingStarted && (
         <button
           onClick={handleStart}
@@ -111,10 +121,33 @@ function TrainingArena({ speech, setSpeech }) {
             ✅ Submit Answer
           </button>
 
-          <div className="flex justify-between mb-2">
+          {/* Score / Wrong Buttons */}
+          <div className="flex justify-between mb-4">
             <button className="px-3 py-1 bg-purple-500 text-white rounded">Score: {score}</button>
             <button className="px-3 py-1 bg-yellow-500 text-white rounded">Wrong: {currentWrong}</button>
             <button className="px-3 py-1 bg-red-500 text-white rounded">Total Wrong: {totalWrong}</button>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-300 h-4 rounded mb-4">
+            <div
+              className="bg-green-500 h-4 rounded"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+
+          {/* Words Attempted */}
+          <div className="flex flex-wrap gap-2">
+            {wordsAttempted.map((w, i) => (
+              <span
+                key={i}
+                className={`px-2 py-1 rounded ${
+                  w.correct ? "bg-green-300" : "bg-red-300"
+                }`}
+              >
+                {w.word} {w.correct ? "✅" : "❌"}
+              </span>
+            ))}
           </div>
         </>
       )}
