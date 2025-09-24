@@ -1,11 +1,11 @@
 // src/components/App.jsx
+// src/App.jsx
 import React, { useState } from "react";
-import StartScreen from "./StartScreen";
-import ModeSelection from "./ModeSelection";
-import TrainingArena from "./TrainingArena";
-import UserInfo from "./UserInfo";
-import Header from "./Header";
-
+import StartScreen from "./components/StartScreen";
+import ModeSelection from "./components/ModeSelection";
+import TrainingArena from "./components/TrainingArena";
+import UserInfo from "./components/UserInfo";
+import Header from "./components/Header";
 export default function App() {
   const [stage, setStage] = useState("start"); // start → user → mode → arena
   const [userName, setUserName] = useState("");
