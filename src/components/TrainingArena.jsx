@@ -1,120 +1,97 @@
-// src/components/TrainingArena.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { easyWords, averageWords, hardWords } from "../words";
 
-const TrainingArena = ({ playerName, avatar, mode, totalQuestions, onBack }) => {
+function TrainingArena({ playerName, avatar, mode, maxQuestions, setCurrentScreen }) {
+  const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [answer, setAnswer] = useState("");
   const [score, setScore] = useState(0);
-  const [wrong, setWrong] = useState(0);
-  const [inputValue, setInputValue] = useState("");
-  const [wordsList, setWordsList] = useState([]);
   const [message, setMessage] = useState("");
-  const [dictationWord, setDictationWord] = useState(null);
-
-  const correctAudio = useRef(new Audio("/correct.mp3"));
-  const wrongAudio = useRef(new Audio("/wrong.mp3"));
-  const dictationAudio = useRef(new Audio());
-  const timerRef = useRef(null);
+  const bgMusic = useRef(null);
+  const correctSound = useRef(null);
+  const wrongSound = useRef(null);
 
   useEffect(() => {
-    // generate words list based on mode
-    let selectedWords = [];
-    if (mode === "Easy") selectedWords = [...easyWords];
-    else if (mode === "Average") selectedWords = [...averageWords];
-    else selectedWords = [...hardWords];
+    // Select words randomly based on mode
+    let wordsPool = mode === "easy" ? easyWords : mode === "average" ? averageWords : hardWords;
+    let shuffled = [...wordsPool].sort(() => 0.5 - Math.random()).slice(0, maxQuestions);
+    setQuestions(shuffled);
 
-    // shuffle and pick required number of questions
-    selectedWords = selectedWords.sort(() => 0.5 - Math.random());
-    setWordsList(selectedWords.slice(0, totalQuestions));
-    setCurrentIndex(0);
-  }, [mode, totalQuestions]);
+    // Load audio
+    bgMusic.current = new Audio("/bg.mp3");
+    bgMusic.current.loop = true;
+    bgMusic.current.volume = 0.3;
+    bgMusic.current.play();
 
-  useEffect(() => {
-    if (wordsList.length > 0 && currentIndex < wordsList.length) {
-      playDictation(wordsList[currentIndex]);
-    }
-  }, [wordsList, currentIndex]);
+    correctSound.current = new Audio("/correct.mp3");
+    wrongSound.current = new Audio("/wrong.mp3");
 
-  const playDictation = (word) => {
-    clearTimeout(timerRef.current);
-    setDictationWord(word);
-    dictationAudio.current.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${word}&tl=en-IN&client=tw-ob`;
-    dictationAudio.current.play();
-    timerRef.current = setTimeout(() => {
-      nextWord();
-    }, 10000); // auto next after 10 sec
+    playWord(shuffled[0]);
+
+    // Cleanup
+    return () => {
+      bgMusic.current.pause();
+    };
+  }, []);
+
+  const playWord = (word) => {
+    if (!word) return;
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = "en-IN"; // Indian English
+    window.speechSynthesis.speak(utterance);
   };
 
-  const checkAnswer = () => {
-    if (inputValue.trim().toLowerCase() === dictationWord.toLowerCase()) {
+  const handleSubmit = () => {
+    if (answer.toLowerCase() === questions[currentIndex].toLowerCase()) {
+      correctSound.current.play();
       setScore(score + 1);
-      correctAudio.current.play();
-      setMessage(`Well done, ${playerName}!`);
+      setMessage("Correct!");
     } else {
-      setWrong(wrong + 1);
-      wrongAudio.current.play();
-      setMessage(`Oops! Correct answer: ${dictationWord}`);
+      wrongSound.current.play();
+      setMessage(`Wrong! Correct: ${questions[currentIndex]}`);
     }
-    setInputValue("");
-    nextWord();
-  };
-
-  const nextWord = () => {
-    clearTimeout(timerRef.current);
-    if (currentIndex + 1 < wordsList.length) setCurrentIndex(currentIndex + 1);
-    else setDictationWord(null); // end
+    setAnswer("");
+    if (currentIndex + 1 < questions.length) {
+      setTimeout(() => {
+        setCurrentIndex(currentIndex + 1);
+        playWord(questions[currentIndex + 1]);
+        setMessage("");
+      }, 1000);
+    } else {
+      setTimeout(() => setCurrentScreen("userinfo"), 1000);
+    }
   };
 
   return (
-    <div className="container mx-auto p-4 text-center">
-      <div className="flex justify-between items-center mb-4">
-        <button className="btn btn-secondary" onClick={onBack}>
-          ⬅ Back
-        </button>
-        <div>
-          <span>{avatar} {playerName}</span>
-        </div>
-        <button className="btn btn-secondary" onClick={() => {}}>
-          🎵 Music On/Off
-        </button>
-      </div>
-
+    <div className="flex flex-col items-center justify-center min-h-screen text-center bg-yellow-100 p-4">
       <h2 className="text-2xl font-bold mb-2">
-        {dictationWord ? "Listen & Type the Word" : "Training Completed!"}
+        {avatar} {playerName}
       </h2>
+      <p className="mb-4">Score: {score}</p>
 
-      {dictationWord && (
-        <>
-          <input
-            type="text"
-            className="border p-2 mb-2 text-center"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Type the word here"
-          />
-          <br />
-          <button className="btn btn-primary" onClick={checkAnswer}>
-            Submit
-          </button>
-        </>
-      )}
+      <input
+        type="text"
+        value={answer}
+        onChange={(e) => setAnswer(e.target.value)}
+        className="mb-2 px-3 py-2 rounded text-lg"
+        onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+      />
+      <button
+        onClick={handleSubmit}
+        className="mb-2 px-4 py-2 bg-green-400 rounded font-bold hover:bg-green-500 transition"
+      >
+        Submit
+      </button>
 
-      <div className="mt-4">
-        <p>Score: {score}</p>
-        <p>Wrong: {wrong}</p>
-        <p className="mt-2 font-semibold text-blue-600">{message}</p>
-      </div>
-
-      {!dictationWord && (
-        <button
-          className="btn btn-success mt-4"
-          onClick={() => setCurrentIndex(0)}
-        >
-          Play Again
-        </button>
-      )}
+      <p className="text-lg font-bold">{message}</p>
+      <button
+        onClick={() => setCurrentScreen("start")}
+        className="mt-4 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+      >
+        Back
+      </button>
     </div>
   );
-};
+}
 
 export default TrainingArena;
