@@ -1,145 +1,298 @@
-import React, { useEffect, useState } from "react";
-import correctSound from "../../public/correct.mp3";
-import wrongSound from "../../public/wrong.mp3";
-import bgMusic from "../../public/bg.mp3";
-import wordsData from "../words";
+// src/components/TrainingArena.jsx
+import React, { useEffect, useRef, useState } from "react";
+import { easyWords, averageWords, hardWords } from "../words.js";
 
-function TrainingArena({ userName, avatar, mode, maxQuestions, onRestart }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [input, setInput] = useState("");
-  const [score, setScore] = useState(0);
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+export default function TrainingArena({
+  userName = "Player",
+  avatar = "🐝",
+  mode = "easy",
+  maxQuestions = 10,
+  onRestart,
+}) {
   const [words, setWords] = useState([]);
+  const [index, setIndex] = useState(0);
+  const [typed, setTyped] = useState("");
+  const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState("");
+  const [seconds, setSeconds] = useState(10);
+  const [running, setRunning] = useState(false);
 
-  const correctAudio = new Audio(correctSound);
-  const wrongAudio = new Audio(wrongSound);
-  const bgAudio = new Audio(bgMusic);
+  const timerRef = useRef(null);
+  const bgRef = useRef(null);
+  const correctRef = useRef(null);
+  const wrongRef = useRef(null);
 
+  // initialize audio
   useEffect(() => {
-    bgAudio.loop = true;
-    bgAudio.volume = 0.5;
-    bgAudio.play();
+    bgRef.current = new Audio("/bg.mp3");
+    bgRef.current.loop = true;
+    bgRef.current.volume = 0.5;
+
+    correctRef.current = new Audio("/correct.mp3");
+    wrongRef.current = new Audio("/wrong.mp3");
+
     return () => {
-      bgAudio.pause();
-      bgAudio.currentTime = 0;
+      window.speechSynthesis.cancel();
+      if (bgRef.current) bgRef.current.pause();
     };
   }, []);
 
-  // Shuffle words once at the start
+  // setup words when mode/maxQuestions changes
   useEffect(() => {
-    let selectedWords = [];
-    if (mode === "easy") selectedWords = wordsData.easy;
-    if (mode === "average") selectedWords = wordsData.average;
-    if (mode === "hard") selectedWords = wordsData.hard;
-
-    // shuffle and slice according to maxQuestions
-    const shuffled = [...selectedWords].sort(() => Math.random() - 0.5);
-    setWords(shuffled.slice(0, maxQuestions));
+    let source =
+      mode === "easy" ? easyWords : mode === "average" ? averageWords : hardWords;
+    if (!Array.isArray(source)) source = [];
+    const shuffled = shuffleArray(source);
+    const take = Math.max(1, Math.min(maxQuestions || 10, shuffled.length));
+    setWords(shuffled.slice(0, take));
+    setIndex(0);
+    setScore(0);
+    setTyped("");
+    setFeedback("");
+    setSeconds(10);
   }, [mode, maxQuestions]);
 
-  const speakWord = (word) => {
-    // lower background music
-    bgAudio.volume = 0.1;
+  // start bg music
+  useEffect(() => {
+    if (bgRef.current) {
+      bgRef.current.play().catch(() => {});
+    }
+  }, []);
 
-    const utterance = new SpeechSynthesisUtterance(word.word);
-    utterance.lang = "en-IN"; // Indian English Accent
-    utterance.rate = 0.9;
+  // when index changes → pronounce + start timer
+  useEffect(() => {
+    if (!words || words.length === 0) return;
+    if (index >= words.length) {
+      setRunning(false);
+      return;
+    }
+    setTyped("");
+    setFeedback("");
+    setSeconds(10);
+    pronounce(words[index]);
 
-    utterance.onend = () => {
-      // restore bg music
-      bgAudio.volume = 0.5;
+    setRunning(true);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setSeconds((s) => {
+        if (s <= 1) {
+          clearInterval(timerRef.current);
+          handleAnswer("", true);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [words, index]);
 
-    window.speechSynthesis.speak(utterance);
+  // pronounce current word (Indian accent)
+  const pronounce = (entry) => {
+    if (!entry) return;
+    try {
+      if (bgRef.current) bgRef.current.volume = 0.08;
+    } catch (e) {}
+
+    try {
+      const u = new SpeechSynthesisUtterance(entry.word);
+      u.lang = "en-IN"; // Indian English accent
+      u.rate = 0.95;
+      u.pitch = 1;
+      u.onend = () => {
+        if (bgRef.current) bgRef.current.volume = 0.5;
+      };
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch (e) {
+      if (bgRef.current) bgRef.current.volume = 0.5;
+    }
   };
 
-  useEffect(() => {
-    if (words.length > 0 && currentIndex < words.length) {
-      speakWord(words[currentIndex]);
-    }
-  }, [words, currentIndex]);
+  const motivational = () => {
+    const msgs = [
+      `Well done ${userName}! Keep it up!`,
+      `Great job ${userName}! 👍`,
+      `Awesome ${userName}! You're doing great!`,
+      `${userName}, brilliant! Next one!`,
+      `Nice work ${userName}!`,
+    ];
+    return msgs[Math.floor(Math.random() * msgs.length)];
+  };
 
-  const checkAnswer = () => {
-    const correct = words[currentIndex].word.toLowerCase();
-    if (input.trim().toLowerCase() === correct) {
-      setScore(score + 1);
-      setFeedback(`🎉 Well done ${userName}! Keep it up!`);
-      correctAudio.play();
+  const handleAnswer = (typedValue, timedOut = false) => {
+    if (!words || index >= words.length) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    setRunning(false);
+
+    const correctWord = (words[index].word || "").toLowerCase().trim();
+    const userAns = (typedValue || typed || "").toLowerCase().trim();
+
+    const isCorrect = userAns === correctWord && !timedOut && userAns !== "";
+
+    if (isCorrect) {
+      setScore((s) => s + 1);
+      setFeedback(motivational());
+      correctRef.current && correctRef.current.play().catch(() => {});
     } else {
-      setFeedback(`❌ Oops ${userName}, the correct spelling is "${correct}"`);
-      wrongAudio.play();
+      setFeedback(`Oops! Correct: ${correctWord}`);
+      wrongRef.current && wrongRef.current.play().catch(() => {});
     }
-    setInput("");
+
     setTimeout(() => {
       setFeedback("");
-      setCurrentIndex(currentIndex + 1);
-    }, 1500);
+      setIndex((i) => i + 1);
+    }, 1400);
   };
 
-  if (currentIndex >= words.length) {
+  const toggleMusic = () => {
+    if (!bgRef.current) return;
+    if (bgRef.current.paused) bgRef.current.play().catch(() => {});
+    else bgRef.current.pause();
+  };
+
+  const computeGrade = () => {
+    const total = words.length || 1;
+    const pct = Math.round((score / total) * 100);
+    if (pct >= 80) return { grade: "A", pct };
+    if (pct >= 60) return { grade: "B", pct };
+    if (pct >= 40) return { grade: "C", pct };
+    return { grade: "D", pct };
+  };
+
+  if (!words || words.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-3xl font-bold mb-4">Game Over 🎉</h2>
-        <p className="text-lg mb-4">
-          {userName}, your final score is: {score}/{words.length}
-        </p>
-        <button
-          onClick={onRestart}
-          className="px-6 py-2 bg-blue-500 text-white rounded-full font-bold hover:scale-105 transition"
-        >
-          ⬅ Back to Home
-        </button>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+        <p className="text-lg">Preparing words...</p>
       </div>
     );
   }
 
+  if (index >= words.length) {
+    const g = computeGrade();
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">{avatar}</div>
+          <h2 className="text-3xl font-bold mb-2">Well done, {userName} 🎉</h2>
+          <p className="text-xl mb-2">
+            Score: {score} / {words.length}
+          </p>
+          <p className="text-lg mb-4">
+            Grade: <strong>{g.grade}</strong> ({g.pct}%)
+          </p>
+          <div className="text-6xl mb-4 animate-bounce">
+            {g.pct >= 60 ? "👍" : "✨"}
+          </div>
+          <button
+            onClick={onRestart}
+            className="px-6 py-2 rounded-full bg-blue-600 text-white"
+          >
+            Play Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const entry = words[index];
+
   return (
-    <div className="flex flex-col items-center justify-center p-6 text-center">
-      {/* Avatar + Name */}
-      <div className="flex items-center mb-4">
-        <span className="text-4xl mr-2">{avatar}</span>
-        <h3 className="text-xl font-bold text-purple-700">{userName}</h3>
+    <div className="min-h-[60vh] flex flex-col items-center justify-start p-6 text-center">
+      <div className="w-full max-w-xl flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="text-4xl">{avatar}</div>
+          <div className="text-left">
+            <div className="text-sm text-gray-600">Player</div>
+            <div className="font-bold">{userName}</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleMusic}
+            className="px-3 py-1 rounded bg-gray-200"
+          >
+            🎵
+          </button>
+          <button
+            onClick={onRestart}
+            className="px-3 py-1 rounded bg-gray-200"
+          >
+            ⬅
+          </button>
+        </div>
       </div>
 
-      {/* Word + Hindi Meaning */}
-      <h2 className="text-2xl font-bold mb-2">
-        Listen & Type:{" "}
-        <span className="text-green-600">
-          {words[currentIndex].word} — {words[currentIndex].hindi}
-        </span>
-      </h2>
+      <div className="w-full max-w-xl mb-4">
+        <div className="text-sm mb-2">
+          Progress: {index + 1} / {words.length}
+        </div>
+        <div className="w-full h-3 bg-gray-200 rounded overflow-hidden">
+          <div
+            className="h-3 bg-green-400"
+            style={{ width: `${(index / words.length) * 100}%` }}
+          />
+        </div>
+      </div>
 
-      {/* Input */}
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        className="border rounded p-2 mb-4 text-center"
-        placeholder="Type spelling here"
-      />
+      <div className="bg-white/80 max-w-xl w-full rounded-xl p-6 shadow-md mb-4">
+        <div className="mb-2 text-sm text-gray-600">
+          Listen & Type (Meaning shown):
+        </div>
+        <div className="text-2xl font-semibold mb-4">{entry.hindi}</div>
 
-      <button
-        onClick={checkAnswer}
-        className="px-6 py-2 bg-green-500 text-white rounded-full font-bold hover:scale-105 transition"
-      >
-        Submit
-      </button>
+        <div className="flex flex-col items-center">
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAnswer(typed);
+            }}
+            className="w-full max-w-md p-3 border rounded-lg text-center mb-3"
+            placeholder="Type the word you hear (in English)"
+            autoFocus
+          />
 
-      {/* Score + Motivation */}
-      <p className="mt-4 text-lg font-semibold">{feedback}</p>
-      <p className="mt-2">
-        Score: {score}/{words.length}
-      </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleAnswer(typed)}
+              className="px-4 py-2 bg-green-500 text-white rounded-full"
+            >
+              Submit
+            </button>
+            <button
+              onClick={() => pronounce(entry)}
+              className="px-4 py-2 bg-yellow-400 rounded-full"
+            >
+              🔁 Replay
+            </button>
+            <div className="px-3 py-2 rounded bg-gray-100">{seconds}s</div>
+          </div>
 
-      {/* Back Button */}
-      <button
-        onClick={onRestart}
-        className="mt-6 px-6 py-2 bg-red-500 text-white rounded-full font-bold hover:scale-105 transition"
-      >
-        ⬅ Back
-      </button>
+          {feedback && (
+            <div className="mt-4 text-lg font-medium">{feedback}</div>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-xl w-full text-center mt-2">
+        <div className="text-sm">
+          Score: <strong>{score}</strong>
+        </div>
+      </div>
     </div>
   );
 }
-
-export default TrainingArena;
