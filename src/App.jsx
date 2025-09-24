@@ -1,53 +1,56 @@
+// src/components/App.jsx
 import React, { useState } from "react";
-import StartScreen from "./components/StartScreen";
-import ModeSelection from "./components/ModeSelection";
-import TrainingArena from "./components/TrainingArena";
+import StartScreen from "./StartScreen";
+import ModeSelection from "./ModeSelection";
+import TrainingArena from "./TrainingArena";
+import UserInfo from "./UserInfo";
+import Header from "./Header";
 
-function App() {
-  const [page, setPage] = useState("start");
+export default function App() {
+  const [stage, setStage] = useState("start"); // start → user → mode → arena
   const [userName, setUserName] = useState("");
-  const [avatar, setAvatar] = useState("🐝");
-  const [mode, setMode] = useState("easy");
-  const [maxQuestions, setMaxQuestions] = useState(10);
+  const [avatar, setAvatar] = useState("");
+  const [mode, setMode] = useState("");
+  const [questionCount, setQuestionCount] = useState(5);
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-blue-300 flex items-center justify-center">
-      {page === "start" && (
-        <StartScreen
-          onNext={(name, avatarChoice) => {
+    <div className="min-h-screen bg-gradient-to-br from-yellow-100 to-purple-200 flex flex-col items-center justify-center p-4">
+      <Header />
+
+      {stage === "start" && (
+        <StartScreen onStart={() => setStage("user")} />
+      )}
+
+      {stage === "user" && (
+        <UserInfo
+          onSubmit={(name, avatar) => {
             setUserName(name);
-            setAvatar(avatarChoice);
-            setPage("mode");
+            setAvatar(avatar);
+            setStage("mode");
           }}
-          avatar={avatar}
-          setAvatar={setAvatar}
-          setUserName={setUserName}
-          userName={userName}
         />
       )}
 
-      {page === "mode" && (
+      {stage === "mode" && (
         <ModeSelection
-          onSelectMode={(selectedMode, selectedQuestions) => {
+          onSelectMode={(selectedMode, count) => {
             setMode(selectedMode);
-            setMaxQuestions(selectedQuestions);
-            setPage("training");
+            setQuestionCount(count);
+            setStage("arena");
           }}
-          onBack={() => setPage("start")}
+          onBack={() => setStage("start")}
         />
       )}
 
-      {page === "training" && (
+      {stage === "arena" && (
         <TrainingArena
+          mode={mode}
+          questionCount={questionCount}
           userName={userName}
           avatar={avatar}
-          mode={mode}
-          maxQuestions={maxQuestions}
-          onRestart={() => setPage("start")}
+          onBack={() => setStage("mode")}
         />
       )}
     </div>
   );
 }
-
-export default App;
