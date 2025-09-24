@@ -1,3 +1,4 @@
+// src/components/ModeSelection.jsx
 import React, { useState } from "react";
 
 function ModeSelection({ setCurrentScreen, mode, setMode, maxQuestions, setMaxQuestions }) {
@@ -9,13 +10,8 @@ function ModeSelection({ setCurrentScreen, mode, setMode, maxQuestions, setMaxQu
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
-      <h2 className="text-4xl font-bold mb-2 flex justify-center">
-        <span className="animate-bounce mr-2">🐝</span>SpellBee Trainer
-        <span className="animate-bounce ml-2">🐝</span>
-      </h2>
-
-      <h3 className="text-2xl mb-4">Select Mode</h3>
+    <div className="flex flex-col items-center justify-center min-h-screen text-center">
+      <h2 className="text-4xl font-bold mb-4">Select Mode</h2>
 
       <div className="flex gap-4 mb-4">
         {["easy", "average", "hard"].map((m) => (
@@ -31,6 +27,7 @@ function ModeSelection({ setCurrentScreen, mode, setMode, maxQuestions, setMaxQu
         ))}
       </div>
 
+      <label className="mb-2 text-lg font-medium">Choose number of questions:</label>
       <input
         type="number"
         min="1"
