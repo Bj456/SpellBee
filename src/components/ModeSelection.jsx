@@ -11,6 +11,12 @@ function ModeSelection({ setCurrentScreen, mode, setMode, maxQuestions, setMaxQu
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center">
+      {/* Splash-style heading like StartScreen */}
+      <h1 className="text-5xl font-bold mb-4 flex justify-center">
+        <span className="animate-bounce">🐝</span> SpellBee Trainer{" "}
+        <span className="animate-bounce">🐝</span>
+      </h1>
+
       <h2 className="text-4xl font-bold mb-4">Select Mode</h2>
 
       <div className="flex gap-4 mb-4">
