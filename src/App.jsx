@@ -1,39 +1,49 @@
-import Header from "./components/Header";
+import React, { useState } from "react";
 import StartScreen from "./components/StartScreen";
 import ModeSelection from "./components/ModeSelection";
 import TrainingArena from "./components/TrainingArena";
 import UserInfo from "./components/UserInfo";
 
-
 function App() {
-  const [screen, setScreen] = useState("start"); // start / mode / training
-  const [userName, setUserName] = useState("");
-  const [avatar, setAvatar] = useState("🐝");
-  const [musicOn, setMusicOn] = useState(true);
+  const [currentScreen, setCurrentScreen] = useState("start");
+  const [playerName, setPlayerName] = useState("");
+  const [avatar, setAvatar] = useState(null);
+  const [mode, setMode] = useState("easy");
+  const [maxQuestions, setMaxQuestions] = useState(5);
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-purple-200 via-pink-200 to-yellow-200">
-      <Header
-        screen={screen}
-        setScreen={setScreen}
-        musicOn={musicOn}
-        setMusicOn={setMusicOn}
-      />
-
-      {screen === "start" && (
+    <div className="App">
+      {currentScreen === "start" && (
         <StartScreen
-          setScreen={setScreen}
-          setUserName={setUserName}
+          setCurrentScreen={setCurrentScreen}
+          setPlayerName={setPlayerName}
           setAvatar={setAvatar}
         />
       )}
-
-      {screen === "mode" && (
-        <ModeSelection setScreen={setScreen} />
+      {currentScreen === "mode" && (
+        <ModeSelection
+          setCurrentScreen={setCurrentScreen}
+          mode={mode}
+          setMode={setMode}
+          maxQuestions={maxQuestions}
+          setMaxQuestions={setMaxQuestions}
+        />
       )}
-
-      {screen === "training" && (
-        <TrainingArena userName={userName} avatar={avatar} musicOn={musicOn} />
+      {currentScreen === "training" && (
+        <TrainingArena
+          playerName={playerName}
+          avatar={avatar}
+          mode={mode}
+          maxQuestions={maxQuestions}
+          setCurrentScreen={setCurrentScreen}
+        />
+      )}
+      {currentScreen === "userinfo" && (
+        <UserInfo
+          playerName={playerName}
+          avatar={avatar}
+          setCurrentScreen={setCurrentScreen}
+        />
       )}
     </div>
   );
