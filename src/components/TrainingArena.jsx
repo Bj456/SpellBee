@@ -17,6 +17,7 @@ export default function TrainingArena({
   mode = "easy",
   maxQuestions = 10,
   onRestart,
+  onBackToHome,
 }) {
   const [words, setWords] = useState([]);
   const [index, setIndex] = useState(0);
@@ -25,6 +26,7 @@ export default function TrainingArena({
   const [feedback, setFeedback] = useState("");
   const [seconds, setSeconds] = useState(10);
   const [running, setRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   const timerRef = useRef(null);
   const bgRef = useRef(null);
@@ -83,21 +85,23 @@ export default function TrainingArena({
     setRunning(true);
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setSeconds((s) => {
-        if (s <= 1) {
-          clearInterval(timerRef.current);
-          handleAnswer("", true);
-          return 0;
-        }
-        return s - 1;
-      });
+      if (!paused) {
+        setSeconds((s) => {
+          if (s <= 1) {
+            clearInterval(timerRef.current);
+            handleAnswer("", true);
+            return 0;
+          }
+          return s - 1;
+        });
+      }
     }, 1000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [words, index]);
+  }, [words, index, paused]);
 
   // pronounce current word (Indian accent)
   const pronounce = (entry) => {
@@ -163,6 +167,10 @@ export default function TrainingArena({
     else bgRef.current.pause();
   };
 
+  const togglePause = () => {
+    setPaused(!paused);
+  };
+
   const computeGrade = () => {
     const total = words.length || 1;
     const pct = Math.round((score / total) * 100);
@@ -198,9 +206,15 @@ export default function TrainingArena({
           </div>
           <button
             onClick={onRestart}
-            className="px-6 py-2 rounded-full bg-blue-600 text-white"
+            className="px-6 py-2 rounded-full bg-blue-600 text-white mb-2"
           >
             Play Again
+          </button>
+          <button
+            onClick={onBackToHome}
+            className="px-6 py-2 rounded-full bg-gray-400 text-white"
+          >
+            Back to Home
           </button>
         </div>
       </div>
@@ -212,25 +226,16 @@ export default function TrainingArena({
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-start p-6 text-center">
       <div className="w-full max-w-xl flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="text-4xl">{avatar}</div>
-          <div className="text-left">
-            <div className="text-sm text-gray-600">Player</div>
-            <div className="font-bold">{userName}</div>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="text-4xl">{avatar}</span>
+          <span className="font-bold text-white text-lg">{userName}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={toggleMusic}
-            className="px-3 py-1 rounded bg-gray-200"
-          >
+          <button onClick={toggleMusic} className="px-3 py-1 rounded bg-gray-200">
             🎵
           </button>
-          <button
-            onClick={onRestart}
-            className="px-3 py-1 rounded bg-gray-200"
-          >
+          <button onClick={onBackToHome} className="px-3 py-1 rounded bg-gray-200">
             ⬅
           </button>
         </div>
@@ -274,25 +279,4 @@ export default function TrainingArena({
               Submit
             </button>
             <button
-              onClick={() => pronounce(entry)}
-              className="px-4 py-2 bg-yellow-400 rounded-full"
-            >
-              🔁 Replay
-            </button>
-            <div className="px-3 py-2 rounded bg-gray-100">{seconds}s</div>
-          </div>
-
-          {feedback && (
-            <div className="mt-4 text-lg font-medium">{feedback}</div>
-          )}
-        </div>
-      </div>
-
-      <div className="max-w-xl w-full text-center mt-2">
-        <div className="text-sm">
-          Score: <strong>{score}</strong>
-        </div>
-      </div>
-    </div>
-  );
-}
+             
