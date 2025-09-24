@@ -7,17 +7,18 @@ function StartScreen({ setCurrentScreen, setPlayerName, setAvatar }) {
   const handleEnter = () => {
     if (name.trim() !== "") {
       setPlayerName(name);
-      setAvatar(selectedAvatar);
+      setAvatar(selectedAvatar || "🐝");
       setCurrentScreen("mode");
     }
   };
 
-  const avatars = ["🐝", "🦋", "🦁", "🐶", "🐱"]; // example avatars
+  const avatars = ["🐝", "🦋", "🦁", "🐶", "🐱"];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen text-center bg-gradient-to-r from-purple-400 via-pink-400 to-red-400">
-      <h1 className="text-5xl font-bold mb-2">
-        <span className="animate-bounce">🐝</span> SpellBee Trainer{" "}
+    <div className="flex flex-col items-center justify-center min-h-screen text-center bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 p-4">
+      <h1 className="text-5xl font-bold mb-2 flex justify-center">
+        <span className="animate-bounce">🐝</span>
+        <span className="animate-pulse ml-2 mr-2">SpellBee Trainer</span>
         <span className="animate-bounce">🐝</span>
       </h1>
       <p className="text-xl mb-4">Practice your spellings in a fun way!</p>
