@@ -1,35 +1,21 @@
-import React from "react";
-
-function Header({ onBack, onToggleMusic, musicOn }) {
+export default function Header({ screen, setScreen, musicOn, setMusicOn }) {
   return (
-    <div className="w-full text-center mb-6">
-      <h1 className="text-4xl sm:text-5xl font-extrabold text-purple-700 animate-bounce mb-3">
-        🐝 SpellBee Trainer 🐝
-      </h1>
-      <p className="text-lg text-gray-700 mb-4">
-        Practice your spellings in a fun and interactive way!
-      </p>
-      <div className="flex gap-3 justify-center">
+    <div className="flex justify-between items-center p-4 bg-purple-100 shadow-md">
+      {screen !== "start" && (
         <button
-          onClick={onBack}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition"
+          className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+          onClick={() => setScreen("start")}
         >
           ⬅ Back
         </button>
+      )}
 
-        <button
-          onClick={onToggleMusic}
-          className={`px-4 py-2 rounded-lg shadow-md transition ${
-            musicOn
-              ? "bg-red-500 hover:bg-red-600 text-white"
-              : "bg-green-500 hover:bg-green-600 text-white"
-          }`}
-        >
-          {musicOn ? "🔇 Music Off" : "🎵 Music On"}
-        </button>
-      </div>
+      <button
+        className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+        onClick={() => setMusicOn(!musicOn)}
+      >
+        {musicOn ? "🎵 Music On" : "🎵 Music Off"}
+      </button>
     </div>
   );
 }
-
-export default Header;
