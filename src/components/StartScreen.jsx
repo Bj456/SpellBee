@@ -1,34 +1,54 @@
-// src/components/StartScreen.jsx
-import React, { useEffect, useState } from "react";
+import { useState } from "react";
 
-export default function StartScreen({ onStart }) {
-  const [vibrate, setVibrate] = useState(true);
+export default function StartScreen({ setScreen, setUserName, setAvatar }) {
+  const [name, setName] = useState("");
+  const [selectedAvatar, setSelectedAvatar] = useState("🐝");
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setVibrate((prev) => !prev);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const avatars = ["🐝", "🦋", "🐞", "🦄", "🐱"];
+
+  const handleEnter = () => {
+    if (!name) return alert("Please enter your name!");
+    setUserName(name);
+    setAvatar(selectedAvatar);
+    setScreen("mode");
+  };
 
   return (
-    <div className="text-center">
-      <h1
-        className={`text-5xl font-bold mb-4 flex justify-center items-center ${
-          vibrate ? "animate-bounce text-yellow-600" : "text-purple-700"
-        }`}
-      >
-        <span className="animate-bounce mr-2">🐝</span>
-        SpellBee Trainer
-        <span className="animate-bounce ml-2">🐝</span>
+    <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] text-center p-4 space-y-6">
+      <h1 className="text-4xl font-bold mb-2 flex justify-center">
+        <span className="animate-bounce">🐝</span> SpellBee Trainer{" "}
+        <span className="animate-bounce">🐝</span>
       </h1>
-      <p className="mb-6 text-lg">Practice your spellings in a fun and interactive way!</p>
-      <button
-        className="px-6 py-3 bg-purple-600 text-white rounded-xl shadow-lg hover:bg-purple-800 transition"
-        onClick={onStart}
-      >
-        Get Enter → Play
-      </button>
+      <p className="text-lg">Practice your spellings in a fun and interactive way!</p>
+
+      <div className="flex flex-col space-y-4 w-full max-w-xs">
+        <input
+          type="text"
+          placeholder="Enter Your Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="border border-gray-400 rounded px-3 py-2 text-center"
+        />
+
+        <div className="flex justify-center space-x-4 text-3xl">
+          {avatars.map((av) => (
+            <span
+              key={av}
+              className={`cursor-pointer ${selectedAvatar === av ? "scale-125" : ""}`}
+              onClick={() => setSelectedAvatar(av)}
+            >
+              {av}
+            </span>
+          ))}
+        </div>
+
+        <button
+          onClick={handleEnter}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          Get Enter → Play
+        </button>
+      </div>
     </div>
   );
 }
