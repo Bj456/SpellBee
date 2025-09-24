@@ -25,7 +25,6 @@ export default function TrainingArena({
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [seconds, setSeconds] = useState(10);
-  const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
 
   const timerRef = useRef(null);
@@ -33,7 +32,6 @@ export default function TrainingArena({
   const correctRef = useRef(null);
   const wrongRef = useRef(null);
 
-  // initialize audio
   useEffect(() => {
     bgRef.current = new Audio("/bg.mp3");
     bgRef.current.loop = true;
@@ -48,7 +46,6 @@ export default function TrainingArena({
     };
   }, []);
 
-  // setup words when mode/maxQuestions changes
   useEffect(() => {
     let source =
       mode === "easy" ? easyWords : mode === "average" ? averageWords : hardWords;
@@ -63,26 +60,19 @@ export default function TrainingArena({
     setSeconds(10);
   }, [mode, maxQuestions]);
 
-  // start bg music
   useEffect(() => {
-    if (bgRef.current) {
-      bgRef.current.play().catch(() => {});
-    }
+    if (bgRef.current) bgRef.current.play().catch(() => {});
   }, []);
 
-  // when index changes → pronounce + start timer
   useEffect(() => {
     if (!words || words.length === 0) return;
-    if (index >= words.length) {
-      setRunning(false);
-      return;
-    }
+    if (index >= words.length) return;
+
     setTyped("");
     setFeedback("");
     setSeconds(10);
     pronounce(words[index]);
 
-    setRunning(true);
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       if (!paused) {
@@ -100,29 +90,21 @@ export default function TrainingArena({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [words, index, paused]);
 
-  // pronounce current word (Indian accent)
   const pronounce = (entry) => {
     if (!entry) return;
-    try {
-      if (bgRef.current) bgRef.current.volume = 0.08;
-    } catch (e) {}
+    if (bgRef.current) bgRef.current.volume = 0.08;
 
-    try {
-      const u = new SpeechSynthesisUtterance(entry.word);
-      u.lang = "en-IN"; // Indian English accent
-      u.rate = 0.95;
-      u.pitch = 1;
-      u.onend = () => {
-        if (bgRef.current) bgRef.current.volume = 0.5;
-      };
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
-    } catch (e) {
+    const u = new SpeechSynthesisUtterance(entry.word);
+    u.lang = "en-IN";
+    u.rate = 0.95;
+    u.pitch = 1;
+    u.onend = () => {
       if (bgRef.current) bgRef.current.volume = 0.5;
-    }
+    };
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
   };
 
   const motivational = () => {
@@ -139,20 +121,18 @@ export default function TrainingArena({
   const handleAnswer = (typedValue, timedOut = false) => {
     if (!words || index >= words.length) return;
     if (timerRef.current) clearInterval(timerRef.current);
-    setRunning(false);
 
     const correctWord = (words[index].word || "").toLowerCase().trim();
     const userAns = (typedValue || typed || "").toLowerCase().trim();
-
     const isCorrect = userAns === correctWord && !timedOut && userAns !== "";
 
     if (isCorrect) {
       setScore((s) => s + 1);
       setFeedback(motivational());
-      correctRef.current && correctRef.current.play().catch(() => {});
+      correctRef.current?.play().catch(() => {});
     } else {
       setFeedback(`Oops! Correct: ${correctWord}`);
-      wrongRef.current && wrongRef.current.play().catch(() => {});
+      wrongRef.current?.play().catch(() => {});
     }
 
     setTimeout(() => {
@@ -167,9 +147,7 @@ export default function TrainingArena({
     else bgRef.current.pause();
   };
 
-  const togglePause = () => {
-    setPaused(!paused);
-  };
+  const togglePause = () => setPaused(!paused);
 
   const computeGrade = () => {
     const total = words.length || 1;
@@ -198,7 +176,7 @@ export default function TrainingArena({
           <p className="text-xl mb-2">
             Score: {score} / {words.length}
           </p>
-          <p className="text-lg mb-4">
+          <p className="text-lg mb-2">
             Grade: <strong>{g.grade}</strong> ({g.pct}%)
           </p>
           <div className="text-6xl mb-4 animate-bounce">
@@ -216,6 +194,9 @@ export default function TrainingArena({
           >
             Back to Home
           </button>
+          <p className="mt-4 text-sm text-gray-600">
+            Thanks, developed by Teacher Bhaskar Joshi
+          </p>
         </div>
       </div>
     );
@@ -264,9 +245,7 @@ export default function TrainingArena({
           <input
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAnswer(typed);
-            }}
+            onKeyDown={(e) => e.key === "Enter" && handleAnswer(typed)}
             className="w-full max-w-md p-3 border rounded-lg text-center mb-3"
             placeholder="Type the word you hear (in English)"
             autoFocus
