@@ -1,8 +1,9 @@
-import { useState } from "react";
-import StartScreen from "./StartScreen";
-import ModeSelection from "./ModeSelection";
-import TrainingArena from "./TrainingArena";
-import Header from "./Header";
+import Header from "./components/Header";
+import StartScreen from "./components/StartScreen";
+import ModeSelection from "./components/ModeSelection";
+import TrainingArena from "./components/TrainingArena";
+import UserInfo from "./components/UserInfo";
+
 
 function App() {
   const [screen, setScreen] = useState("start"); // start / mode / training
