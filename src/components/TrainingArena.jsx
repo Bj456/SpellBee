@@ -25,6 +25,7 @@ export default function TrainingArena({
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [seconds, setSeconds] = useState(10);
+  const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
 
   const timerRef = useRef(null);
@@ -32,6 +33,7 @@ export default function TrainingArena({
   const correctRef = useRef(null);
   const wrongRef = useRef(null);
 
+  // initialize audio
   useEffect(() => {
     bgRef.current = new Audio("/bg.mp3");
     bgRef.current.loop = true;
@@ -46,6 +48,7 @@ export default function TrainingArena({
     };
   }, []);
 
+  // setup words when mode/maxQuestions changes
   useEffect(() => {
     let source =
       mode === "easy" ? easyWords : mode === "average" ? averageWords : hardWords;
@@ -60,19 +63,26 @@ export default function TrainingArena({
     setSeconds(10);
   }, [mode, maxQuestions]);
 
+  // start bg music
   useEffect(() => {
-    if (bgRef.current) bgRef.current.play().catch(() => {});
+    if (bgRef.current) {
+      bgRef.current.play().catch(() => {});
+    }
   }, []);
 
+  // when index changes → pronounce + start timer
   useEffect(() => {
     if (!words || words.length === 0) return;
-    if (index >= words.length) return;
-
+    if (index >= words.length) {
+      setRunning(false);
+      return;
+    }
     setTyped("");
     setFeedback("");
     setSeconds(10);
     pronounce(words[index]);
 
+    setRunning(true);
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       if (!paused) {
@@ -92,19 +102,26 @@ export default function TrainingArena({
     };
   }, [words, index, paused]);
 
+  // pronounce current word (Indian accent)
   const pronounce = (entry) => {
     if (!entry) return;
-    if (bgRef.current) bgRef.current.volume = 0.08;
+    try {
+      if (bgRef.current) bgRef.current.volume = 0.08;
+    } catch (e) {}
 
-    const u = new SpeechSynthesisUtterance(entry.word);
-    u.lang = "en-IN";
-    u.rate = 0.95;
-    u.pitch = 1;
-    u.onend = () => {
+    try {
+      const u = new SpeechSynthesisUtterance(entry.word);
+      u.lang = "en-IN"; // Indian English accent
+      u.rate = 0.95;
+      u.pitch = 1;
+      u.onend = () => {
+        if (bgRef.current) bgRef.current.volume = 0.5;
+      };
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch (e) {
       if (bgRef.current) bgRef.current.volume = 0.5;
-    };
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    }
   };
 
   const motivational = () => {
@@ -121,18 +138,20 @@ export default function TrainingArena({
   const handleAnswer = (typedValue, timedOut = false) => {
     if (!words || index >= words.length) return;
     if (timerRef.current) clearInterval(timerRef.current);
+    setRunning(false);
 
     const correctWord = (words[index].word || "").toLowerCase().trim();
     const userAns = (typedValue || typed || "").toLowerCase().trim();
+
     const isCorrect = userAns === correctWord && !timedOut && userAns !== "";
 
     if (isCorrect) {
       setScore((s) => s + 1);
       setFeedback(motivational());
-      correctRef.current?.play().catch(() => {});
+      correctRef.current && correctRef.current.play().catch(() => {});
     } else {
       setFeedback(`Oops! Correct: ${correctWord}`);
-      wrongRef.current?.play().catch(() => {});
+      wrongRef.current && wrongRef.current.play().catch(() => {});
     }
 
     setTimeout(() => {
@@ -147,7 +166,9 @@ export default function TrainingArena({
     else bgRef.current.pause();
   };
 
-  const togglePause = () => setPaused(!paused);
+  const togglePause = () => {
+    setPaused(!paused);
+  };
 
   const computeGrade = () => {
     const total = words.length || 1;
@@ -176,7 +197,7 @@ export default function TrainingArena({
           <p className="text-xl mb-2">
             Score: {score} / {words.length}
           </p>
-          <p className="text-lg mb-2">
+          <p className="text-lg mb-4">
             Grade: <strong>{g.grade}</strong> ({g.pct}%)
           </p>
           <div className="text-6xl mb-4 animate-bounce">
@@ -194,8 +215,8 @@ export default function TrainingArena({
           >
             Back to Home
           </button>
-          <p className="mt-4 text-sm text-gray-600">
-            Thanks, developed by Teacher Bhaskar Joshi
+          <p className="mt-4 text-sm text-gray-500">
+            Developed by Teacher Bhaskar Joshi
           </p>
         </div>
       </div>
@@ -206,10 +227,9 @@ export default function TrainingArena({
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-start p-6 text-center">
-      {/* Player info and controls */}
       <div className="w-full max-w-xl flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-4xl animate-bounce">{avatar}</span>
+          <span className="text-4xl">{avatar}</span>
           <span className="font-bold text-white text-lg">{userName}</span>
         </div>
 
@@ -223,9 +243,10 @@ export default function TrainingArena({
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="w-full max-w-xl mb-4">
-        <div className="text-sm mb-2">Progress: {index + 1} / {words.length}</div>
+        <div className="text-sm mb-2">
+          Progress: {index + 1} / {words.length}
+        </div>
         <div className="w-full h-3 bg-gray-200 rounded overflow-hidden">
           <div
             className="h-3 bg-green-400"
@@ -234,7 +255,6 @@ export default function TrainingArena({
         </div>
       </div>
 
-      {/* Dictation & Input */}
       <div className="bg-white/80 max-w-xl w-full rounded-xl p-6 shadow-md mb-4">
         <div className="mb-2 text-sm text-gray-600">
           Listen & Type (Meaning shown):
@@ -245,7 +265,9 @@ export default function TrainingArena({
           <input
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAnswer(typed)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAnswer(typed);
+            }}
             className="w-full max-w-md p-3 border rounded-lg text-center mb-3"
             placeholder="Type the word you hear (in English)"
             autoFocus
@@ -266,9 +288,9 @@ export default function TrainingArena({
             </button>
             <button
               onClick={togglePause}
-              className="px-4 py-2 bg-red-400 text-white rounded-full"
+              className="px-4 py-2 bg-orange-400 rounded-full"
             >
-              {paused ? "▶ Resume" : "⏸ Pause"}
+              {paused ? "▶️ Resume" : "⏸ Pause"}
             </button>
             <div className="px-3 py-2 rounded bg-gray-100">{seconds}s</div>
           </div>
@@ -279,7 +301,6 @@ export default function TrainingArena({
         </div>
       </div>
 
-      {/* Score display */}
       <div className="max-w-xl w-full text-center mt-2">
         <div className="text-sm">
           Score: <strong>{score}</strong>
