@@ -225,9 +225,10 @@ export default function TrainingArena({
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-start p-6 text-center">
+      {/* Player info and controls */}
       <div className="w-full max-w-xl flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-4xl">{avatar}</span>
+          <span className="text-4xl animate-bounce">{avatar}</span>
           <span className="font-bold text-white text-lg">{userName}</span>
         </div>
 
@@ -241,10 +242,9 @@ export default function TrainingArena({
         </div>
       </div>
 
+      {/* Progress bar */}
       <div className="w-full max-w-xl mb-4">
-        <div className="text-sm mb-2">
-          Progress: {index + 1} / {words.length}
-        </div>
+        <div className="text-sm mb-2">Progress: {index + 1} / {words.length}</div>
         <div className="w-full h-3 bg-gray-200 rounded overflow-hidden">
           <div
             className="h-3 bg-green-400"
@@ -253,6 +253,7 @@ export default function TrainingArena({
         </div>
       </div>
 
+      {/* Dictation & Input */}
       <div className="bg-white/80 max-w-xl w-full rounded-xl p-6 shadow-md mb-4">
         <div className="mb-2 text-sm text-gray-600">
           Listen & Type (Meaning shown):
@@ -279,4 +280,32 @@ export default function TrainingArena({
               Submit
             </button>
             <button
-             
+              onClick={() => pronounce(entry)}
+              className="px-4 py-2 bg-yellow-400 rounded-full"
+            >
+              🔁 Replay
+            </button>
+            <button
+              onClick={togglePause}
+              className="px-4 py-2 bg-red-400 text-white rounded-full"
+            >
+              {paused ? "▶ Resume" : "⏸ Pause"}
+            </button>
+            <div className="px-3 py-2 rounded bg-gray-100">{seconds}s</div>
+          </div>
+
+          {feedback && (
+            <div className="mt-4 text-lg font-medium">{feedback}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Score display */}
+      <div className="max-w-xl w-full text-center mt-2">
+        <div className="text-sm">
+          Score: <strong>{score}</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
