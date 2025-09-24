@@ -1,56 +1,41 @@
-// src/components/App.jsx
-// src/App.jsx
-import React, { useState } from "react";
-import StartScreen from "./components/StartScreen";
-import ModeSelection from "./components/ModeSelection";
-import TrainingArena from "./components/TrainingArena";
-import UserInfo from "./components/UserInfo";
-import Header from "./components/Header";
-export default function App() {
-  const [stage, setStage] = useState("start"); // start → user → mode → arena
+import { useState } from "react";
+import StartScreen from "./StartScreen";
+import ModeSelection from "./ModeSelection";
+import TrainingArena from "./TrainingArena";
+import Header from "./Header";
+
+function App() {
+  const [screen, setScreen] = useState("start"); // start / mode / training
   const [userName, setUserName] = useState("");
-  const [avatar, setAvatar] = useState("");
-  const [mode, setMode] = useState("");
-  const [questionCount, setQuestionCount] = useState(5);
+  const [avatar, setAvatar] = useState("🐝");
+  const [musicOn, setMusicOn] = useState(true);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-100 to-purple-200 flex flex-col items-center justify-center p-4">
-      <Header />
+    <div className="min-h-screen bg-gradient-to-r from-purple-200 via-pink-200 to-yellow-200">
+      <Header
+        screen={screen}
+        setScreen={setScreen}
+        musicOn={musicOn}
+        setMusicOn={setMusicOn}
+      />
 
-      {stage === "start" && (
-        <StartScreen onStart={() => setStage("user")} />
-      )}
-
-      {stage === "user" && (
-        <UserInfo
-          onSubmit={(name, avatar) => {
-            setUserName(name);
-            setAvatar(avatar);
-            setStage("mode");
-          }}
+      {screen === "start" && (
+        <StartScreen
+          setScreen={setScreen}
+          setUserName={setUserName}
+          setAvatar={setAvatar}
         />
       )}
 
-      {stage === "mode" && (
-        <ModeSelection
-          onSelectMode={(selectedMode, count) => {
-            setMode(selectedMode);
-            setQuestionCount(count);
-            setStage("arena");
-          }}
-          onBack={() => setStage("start")}
-        />
+      {screen === "mode" && (
+        <ModeSelection setScreen={setScreen} />
       )}
 
-      {stage === "arena" && (
-        <TrainingArena
-          mode={mode}
-          questionCount={questionCount}
-          userName={userName}
-          avatar={avatar}
-          onBack={() => setStage("mode")}
-        />
+      {screen === "training" && (
+        <TrainingArena userName={userName} avatar={avatar} musicOn={musicOn} />
       )}
     </div>
   );
 }
+
+export default App;
