@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from "react"; 
 import StartScreen from "./components/StartScreen";
 import ModeSelection from "./components/ModeSelection";
 import TrainingArena from "./components/TrainingArena";
@@ -31,11 +31,12 @@ function App() {
       )}
       {currentScreen === "training" && (
         <TrainingArena
-          playerName={playerName}
+          userName={playerName}                  // updated
           avatar={avatar}
           mode={mode}
           maxQuestions={maxQuestions}
-          setCurrentScreen={setCurrentScreen}
+          onRestart={() => setCurrentScreen("mode")}  // Play Again
+          onBackToHome={() => setCurrentScreen("start")} // Back to Home
         />
       )}
       {currentScreen === "userinfo" && (
